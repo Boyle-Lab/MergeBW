@@ -22,6 +22,7 @@ extern "C" {
 #include <string>
 #include <algorithm>
 #include <iterator>
+#include <tuple>
 using namespace std;
 
 
@@ -136,6 +137,100 @@ int quantile(std::vector<int> v, double q) {
 	return floor((double)v[floor(h)] + ((h - floor(h)) * ((double)v[floor(h) + 1] - (double)v[floor(h)])));
 }
 
+// Function to find rank
+void rankify(std::vector<double>& A) {
+	int n = A.size();
+	std::vector<double> R(n,0);
+	std::vector< std::tuple<double, int> > T;
+	int r = 1;
+
+	// Create array of tuples storing value and index
+	for(int j = 0; j < n; j++) {
+		T.push_back(std::make_tuple(A[j], j));
+	}
+
+	// Sort tubples by data value
+	std::sort(begin(T), end(T), [](auto const &t1, auto const &t2) {
+        	return get<0>(t1) < get<0>(t2); // or use a custom compare function
+	});
+
+	int i = 0;
+	int index, j;
+	while(i < n) {
+		j = i;
+
+		// Get elements of same rank
+		while(j < n && std::get<0>(T[j]) == std::get<0>(T[j+1])) {
+			j++;
+		}
+
+		int m = j - i + 1;
+
+		for(j = 0; j < m; j++) {
+			// For each equal element use .5
+			index = std::get<1>(T[i+j]);
+			R[index] = r + (m-1)*0.5;
+		}
+
+		// Increment rank and index
+		r+=m;
+		i+=m;
+	}
+
+	A.swap(R);
+}
+
+// convert vectors to vector of SignalData
+void quantileNormalize(std::vector<std::vector<double>>& data) {
+	int cellCount = data.size();
+	int binCount = data[0].size();
+
+	//First calculate rank means
+	std::vector<double> rankedMean(binCount,0);
+	for(int cellID = 0; cellID < cellCount; cellID++) {
+		std::vector<double> x(binCount,0);
+		for(int binID = 0; binID < binCount; binID++) {
+			x[binID] = data[cellID][binID];
+		}
+
+		sort(x.begin(), x.end());
+
+		for(int binID = 0; binID < binCount; binID++) {
+			rankedMean[binID] += x[binID];
+		}
+	}
+	for(int binID = 0; binID < binCount; binID++) {
+		rankedMean[binID] /= (double)cellCount;
+	}
+
+	//calculate half value for ties
+	std::vector<double> rankedMeanTie(binCount-1,0);
+	for(int binID = 0; binID < (binCount-1); binID++) {
+		rankedMeanTie[binID] = ((rankedMean[binID]+rankedMean[binID+1])/2);
+	}
+
+	//Iterate through each cell line
+	for(int s = 0; s < cellCount; s++) {
+		std::vector<double> bins(binCount,0);
+		for(int p = 0; p < binCount; p++) {
+			bins[p] = data[s][p];
+		}
+		rankify(bins);
+
+		std::vector<double> binsQuantileNormalized(binCount, 0);
+		for(int p = 0; p < binCount; p++) {
+			if(std::fmod(bins[p],1) != 0) {
+				binsQuantileNormalized[p] = rankedMeanTie[(int)floor(bins[p])-1];
+			} else {
+				binsQuantileNormalized[p] = rankedMean[(int)(bins[p]-1)];
+			}
+
+			data[s][p] = binsQuantileNormalized[p];
+		}
+	}
+
+}
+
 int main(int argc, char* argv[])
 {
 	std::vector<string> fileList;
@@ -144,7 +239,6 @@ int main(int argc, char* argv[])
 	std::string chromosome;
 	int chromLength;
 	int segmentSize;
-
 
 	// Will need to read in a file of chromosome sizes and names
 	chromosome = "chr1";
