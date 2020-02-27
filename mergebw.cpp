@@ -62,14 +62,14 @@ class SignalData {
 		{
 			int chromStart = 0;
 			int chromEnd = chromLength;
-			std::vector<float> binsTemp (chromEnd, 0);
+			this->binsInput.clear();
 
 			// Note that libBigWig uses char* for input so we have to convert
 		        char *fname = new char[wigFile.length() + 1];
 		        strcpy(fname, wigFile.c_str());
 		        bigWigFile_t *bwFile = bwOpen(fname, NULL, "r");
 
-
+			// convert string to char*
 		        char *chrom = new char[chromosome.length() + 1];
 		        strcpy(chrom, chromosome.c_str());
 
@@ -79,19 +79,17 @@ class SignalData {
 		                exit(1);
         		}
 
-//			binsTemp.resize() //# chroms, size of each chrom... no
-
 		        bwOverlappingIntervals_t *ptr = bwGetValues(bwFile, chrom,
                 				        static_cast<uint32_t>(chromStart),
                         				static_cast<uint32_t>(chromEnd),
-							1);
+							0);
 
 			for(int k = 0; k < (int)(ptr->l); ++k){
                 		if(!isnan( ptr->value[k] )){
-                    			binsTemp[k] = roundf(ptr->value[k] * 1000.0) / 1000.0;
+                    			this->binsInput.push_back(roundf(ptr->value[k] * 1000.0) / 1000.0);
 		                }
 			}
-			//cout << bwFile->cl->chrom[0] << " " << bwFile->cl->len[0] << endl;
+//			cout << bwFile->cl->chrom[0] << " " << bwFile->cl->len[0] << endl;
 		}
 
 	private:
@@ -123,6 +121,21 @@ int getdir(std::string dirname, std::vector<string> & files, std::string filetyp
 	}
 }
 
+double quantile(std::vector<double> v, double q) {
+	sort(v.begin(), v.end());
+	double h = ((v.size() - 1) * q) + 1;
+	if(h >= v.size()) {
+		h = v.size() - 1;
+	}
+	return v[floor(h)] + ((h - floor(h)) * (v[floor(h) + 1] - v[floor(h)]));
+}
+
+int quantile(std::vector<int> v, double q) {
+	sort(v.begin(), v.end());
+	double h = (((double)v.size() - 1) * q) + 1;
+	return floor((double)v[floor(h)] + ((h - floor(h)) * ((double)v[floor(h) + 1] - (double)v[floor(h)])));
+}
+
 int main(int argc, char* argv[])
 {
 	std::vector<string> fileList;
@@ -130,11 +143,13 @@ int main(int argc, char* argv[])
 	std::string wigFile;
 	std::string chromosome;
 	int chromLength;
+	int segmentSize;
 
 
 	// Will need to read in a file of chromosome sizes and names
 	chromosome = "chr1";
 	chromLength = 249250621;
+	segmentSize = 10000000;
 
 	//Parameters
 	std::string inputFolder = "/nfs/boylelabnr_turbo/ENCODE/bigwig/DNase_regulome/"; // make this a commandline option - ends with /!
@@ -143,9 +158,15 @@ int main(int argc, char* argv[])
 	//Read in bigWig files for processing
 	getdir(inputFolder, fileList, ".bigWig"); // may need to also consider bw files
 
+	// Now we need to do this for every chromosome
+
+	// And then for every sub-segment - need to be careful at the end
+
+	// For each file perform calculation on the chromosome and segment
+	//  we should be able to keep the results in memory and write it all out at the end
 	for(int i = 0; i < fileList.size(); i++) {
 		wigFile = inputFolder + fileList[i];
-		inputData.push_back(SignalData(wigFile, chromosome, chromLength));
+		inputData.push_back(SignalData(wigFile, chromosome, segmentSize));
 		cerr << "Processing " << wigFile << endl;
 		inputData.back().readBigWig();
 	}
