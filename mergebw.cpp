@@ -50,43 +50,6 @@ class SignalData {
 		}
 
 
-		void getSignalBins()
-		{
-			int chromStart = 0;
-			int chromEnd = chromLength;
-
-			this->binsInput.clear();
-			std::vector<float> binsTemp (chromEnd, 0);
-
-
-			// Note that libBigWig uses char* for input so we have to convert
-		        char *fname = new char[wigFile.length() + 1];
-		        strcpy(fname, wigFile.c_str());
-		        bigWigFile_t *bwFile = bwOpen(fname, NULL, "r");
-
-		        char *chrom = new char[chromosome.length() + 1];
-		        strcpy(chrom, chromosome.c_str());
-
-			// If there is no file attached die
-		        if(bwFile == NULL){
-                		cerr << "Failed to open file: " << wigFile << endl;
-		                exit(1);
-        		}
-
-			// Read in entire chromosome
-		        bwOverlappingIntervals_t *ptr = bwGetValues(bwFile, chrom,
-                				        static_cast<uint32_t>(chromStart),
-                        				static_cast<uint32_t>(chromEnd),
-							1);
-
-			for(int k = 0; k < (int)(ptr->l); ++k){
-                		if(!isnan( ptr->value[k] )){
-                    			binsTemp[k] = roundf(ptr->value[k] * 1000.0) / 1000.0;
-		                }
-				cout << binsTemp[k];
-			}
-		}
-
 // Method:
 // 1: Read through every poisiton to create a ranked mean - for every cell type sort all positions and create a mean of the values at each rank
 //  This rankedMean list can probably stay in memory
@@ -185,7 +148,6 @@ int main(int argc, char* argv[])
 		inputData.push_back(SignalData(wigFile, chromosome, chromLength));
 		cerr << "Processing " << wigFile << endl;
 		inputData.back().readBigWig();
-//		inputData.back().getSignalBins(chromosome, 1, chromLength);
 	}
 
 	//Options for output: raw or quantile normalized: max, min, quantile
