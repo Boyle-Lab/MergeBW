@@ -3,7 +3,7 @@
 //  tool for merging bigwig files
 //
 //  Author: Alan Boyle
-//  Copywright (c) 2020 Alan Boyle
+//  Copyright (c) 2020 Alan Boyle
 //  This program comes with ABSOLUTELY NO WARRANTY.
 //  This is free software, and you are welcome to redistribute it
 //  under certain conditions.
@@ -32,8 +32,10 @@ class SignalData {
 		// vector of vectors
 		// chrom names and chrom lengths
 
-		SignalData(std::string wigFile) {
+		SignalData(std::string wigFile, std::string chromosome, int chromLength) {
 			this->wigFile = wigFile;
+			this->chromosome = chromosome;
+			this->chromLength = chromLength;
 		}
 
 		SignalData() {
@@ -48,10 +50,14 @@ class SignalData {
 		}
 
 
-		void getSignalBins(std::string chromosome, int chromStart, int chromEnd)
+		void getSignalBins()
 		{
+			int chromStart = 0;
+			int chromEnd = chromLength;
+
 			this->binsInput.clear();
 			std::vector<float> binsTemp (chromEnd, 0);
+
 
 			// Note that libBigWig uses char* for input so we have to convert
 		        char *fname = new char[wigFile.length() + 1];
@@ -77,6 +83,7 @@ class SignalData {
                 		if(!isnan( ptr->value[k] )){
                     			binsTemp[k] = roundf(ptr->value[k] * 1000.0) / 1000.0;
 		                }
+				cout << binsTemp[k];
 			}
 		}
 
@@ -90,12 +97,18 @@ class SignalData {
 		// Read in the bigWig file for all chromosomes into memory
 		void readBigWig()
 		{
-			std::vector<std::vector<float>> binsTemp;
+			int chromStart = 0;
+			int chromEnd = chromLength;
+			std::vector<float> binsTemp (chromEnd, 0);
 
 			// Note that libBigWig uses char* for input so we have to convert
 		        char *fname = new char[wigFile.length() + 1];
 		        strcpy(fname, wigFile.c_str());
 		        bigWigFile_t *bwFile = bwOpen(fname, NULL, "r");
+
+
+		        char *chrom = new char[chromosome.length() + 1];
+		        strcpy(chrom, chromosome.c_str());
 
 			// If there is no file attached die
 		        if(bwFile == NULL){
@@ -120,7 +133,8 @@ class SignalData {
 
 	private:
 		std::string wigFile;
-
+		std::string chromosome;
+		int chromLength;
 
 };
 
@@ -154,6 +168,8 @@ int main(int argc, char* argv[])
 	std::string chromosome;
 	int chromLength;
 
+
+	// Will need to read in a file of chromosome sizes and names
 	chromosome = "chr1";
 	chromLength = 249250621;
 
@@ -166,7 +182,7 @@ int main(int argc, char* argv[])
 
 	for(int i = 0; i < fileList.size(); i++) {
 		wigFile = inputFolder + fileList[i];
-		inputData.push_back(SignalData(wigFile));
+		inputData.push_back(SignalData(wigFile, chromosome, chromLength));
 		cerr << "Processing " << wigFile << endl;
 		inputData.back().readBigWig();
 //		inputData.back().getSignalBins(chromosome, 1, chromLength);
