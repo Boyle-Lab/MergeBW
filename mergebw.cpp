@@ -181,16 +181,16 @@ void rankify(std::vector<double>& A) {
 }
 
 // convert vectors to vector of SignalData
-void quantileNormalize(std::vector<std::vector<double>>& data) {
+void quantileNormalize(std::vector<SignalData>& data) {
 	int cellCount = data.size();
-	int binCount = data[0].size();
+	int binCount = data[0].binsInput.size();
 
 	//First calculate rank means
 	std::vector<double> rankedMean(binCount,0);
 	for(int cellID = 0; cellID < cellCount; cellID++) {
 		std::vector<double> x(binCount,0);
 		for(int binID = 0; binID < binCount; binID++) {
-			x[binID] = data[cellID][binID];
+			x[binID] = data[cellID].binsInput[binID];
 		}
 
 		sort(x.begin(), x.end());
@@ -213,7 +213,7 @@ void quantileNormalize(std::vector<std::vector<double>>& data) {
 	for(int s = 0; s < cellCount; s++) {
 		std::vector<double> bins(binCount,0);
 		for(int p = 0; p < binCount; p++) {
-			bins[p] = data[s][p];
+			bins[p] = data[s].binsInput[p];
 		}
 		rankify(bins);
 
@@ -225,7 +225,7 @@ void quantileNormalize(std::vector<std::vector<double>>& data) {
 				binsQuantileNormalized[p] = rankedMean[(int)(bins[p]-1)];
 			}
 
-			data[s][p] = binsQuantileNormalized[p];
+			data[s].binsInput[p] = binsQuantileNormalized[p];
 		}
 	}
 
@@ -243,7 +243,7 @@ int main(int argc, char* argv[])
 	// Will need to read in a file of chromosome sizes and names
 	chromosome = "chr1";
 	chromLength = 249250621;
-	segmentSize = 10000000;
+	segmentSize = 100000;
 
 	//Parameters
 	std::string inputFolder = "/nfs/boylelabnr_turbo/ENCODE/bigwig/DNase_regulome/"; // make this a commandline option - ends with /!
@@ -267,5 +267,6 @@ int main(int argc, char* argv[])
 
 	//Options for output: raw or quantile normalized: max, min, quantile
 	//Quantile Normalize
+	quantileNormalize(inputData);
 
 }
