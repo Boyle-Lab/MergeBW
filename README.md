@@ -5,11 +5,16 @@ Clone a copy of the repository and submodules:
 git clone --recurse-submodules https://github.com/Boyle-Lab/MergeBW.git
 ```
 
-Build libBigWig
+Build bamtools API (please see bamtools documentation for more information)
+Note: bamtools requires zlib to be installed
 ```
-cd MergeBW/libBigWig/
+cd MergeBW/bamtools/
+mkdir build
+cd build
+cmake -DCMAKE_INSTALL_PREFIX:PATH=$(cd ..; pwd)/install ..
 make
-cd ..
+make install
+cd ../..
 ```
 
 Build 
@@ -17,11 +22,3 @@ Build
 make
 ```
 
-# Use
-Input path to the input folder with bigwig files and the text file containing the name and size of chromosomes in command line: 
-(note: the text file should be in the same folder as the bigwig files)
-
-```
-
-./MergeBW /path/inputfolder/ filename
-```

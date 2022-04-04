@@ -239,43 +239,15 @@ int main(int argc, char* argv[])
 	std::string chromosome;
 	int chromLength;
 	int segmentSize;
-	std::ifstream chromStream;
-	std::string chromName;
-	std::string fileName;
-	int numChroms  = 0;
-	std::vector<int> chromLocation; 
 
-	if (argc < 2) {
-		cerr << "Not enough arguments" << endl;
-		return 0;
-	}
-	int readIndex; 
-	std::string inputFolder = argv[1];
-	std::string tempFolder = "."; 
-	std::vector<string> chromList;
-	fileName = argv[2];
-	int chromNums;
+	// Will need to read in a file of chromosome sizes and names
+	chromosome = "chr1";
+	chromLength = 249250621;
+	segmentSize = 100000;
 
-	cout << "Input segment size: " << endl;
-	cin >> segmentSize;
-	cout << "Input number of chromosomes: ";
-	cin >> chromNums;
-	cout << "Input starting chromosome index: ";
-	cin >> readIndex;
-
-	chromStream.open(inputFolder + fileName);
-	if (!chromStream.is_open()) {
-		cerr << "Error opening text file" << endl;
-		exit(1);
-	}
-
-// read in file that has chromosome names and lengths
-	while (chromStream >> chromName >> chromLength) {
-		numChroms++;
-		chromLocation.push_back(chromLength);
-		chromList.push_back(chromName);
-	}
-	chromStream.close(); 
+	//Parameters
+	std::string inputFolder = "/nfs/boylelabnr_turbo/ENCODE/bigwig/DNase_regulome/"; // make this a commandline option - ends with /!
+	std::string tempFolder = ".";
 
 	//Read in bigWig files for processing
 	getdir(inputFolder, fileList, ".bigWig"); // may need to also consider bw files
@@ -283,33 +255,18 @@ int main(int argc, char* argv[])
 	// Now we need to do this for every chromosome
 
 	// And then for every sub-segment - need to be careful at the end
-	std::vector<vector<SignalData>> inputDataVector;
+
 	// For each file perform calculation on the chromosome and segment
 	//  we should be able to keep the results in memory and write it all out at the end
-	for (int j = readIndex; j < readIndex + chromNums; j++) {
-		chromosome = chromList.at(j);
-		// read in by segment for each file
-		for (int k = 0; k < chromLocation.at(j); k += segmentSize) {
-			int l = 0; 
-			for (int i = 0; i < fileList.size(); i++) {
-				wigFile = inputFolder + fileList[i];
-				inputData.push_back(SignalData(wigFile, chromosome, segmentSize + k));
-				inputData.back().readBigWig();
-			}
-			inputDataVector.push_back(inputData);
-			inputData.clear();
-		}
+	for(int i = 0; i < fileList.size(); i++) {
+		wigFile = inputFolder + fileList[i];
+		inputData.push_back(SignalData(wigFile, chromosome, segmentSize));
+		cerr << "Processing " << wigFile << endl;
+		inputData.back().readBigWig();
 	}
 
 	//Options for output: raw or quantile normalized: max, min, quantile
-
-	// now quantileNormalize for each segment of each chrom of each file
-	// each element of the vector consists of a vector of inputData for each segment for each file
-	for (int i = 0; i < inputDataVector.size(); i++) {
-		quantileNormalize(inputDataVector[i]);
-	}
-	
-	// do output by segment as well
-	// raw output
+	//Quantile Normalize
+	quantileNormalize(inputData);
 
 }
